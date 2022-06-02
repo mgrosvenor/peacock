@@ -7,6 +7,7 @@
 #include <stdio.h>
 #include <stdarg.h>
 #include <ctype.h>
+#include <stdlib.h>
 
 #include "pico/stdlib.h"
 #include "tusb.h"
@@ -35,13 +36,21 @@ void error(const char* fmt, ...)
     va_list args;
     va_start(args, fmt);
     const int err_len = vsnprintf(NULL,0, fmt, args);
-    printf("E:%i:", err_len);
-    vprintf(fmt,args);
-    if(fmt[strlen(fmt) -1 ] != '\n')
+    char* err = calloc(1, err_len + 1);
+    vsnprintf(err,err_len,fmt, args);
+    va_end(args);
+    msg_t msg = 
     {
-        putchar('\n');
-    }    
-    va_end(args);    
+        .name = 'E',
+        .pcount = 1,
+        .params = 
+        {
+            { .type = 's' , .s = err}
+        }
+    };
+
+    send_msg(&msg);
+    
 }
 
 

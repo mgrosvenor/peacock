@@ -18,6 +18,8 @@ void error(const char* fmt, ...)
     va_list args;
     va_start(args, fmt);
     vprintf(fmt, args);
+    printf("\n");
+    fflush(stderr);
     va_end(args);
 }
 
@@ -26,11 +28,11 @@ int send_str(const char* fmt, ...)
 {
     va_list args;
     va_start(args, fmt);
+    vprintf(fmt,args);    
     const int result = serial_vsend_str(fmt, args);
     va_end(args);
     return result;
 }
-
 
 static inline int gpio_set(int pin, int val)
 {
@@ -54,7 +56,7 @@ static inline int gpio_set(int pin, int val)
 
     const msg_t msg = 
     {
-        .name = 's',
+        .name = 'S',
         .pcount = 2,
         .params = 
         {
@@ -66,25 +68,27 @@ static inline int gpio_set(int pin, int val)
     return send_msg(&msg);
 }
 
-void response()
+int response()
 {
     msg_t msg = { 0 };
     if(get_msg(&msg))
     {
         fprintf(stderr, "Could not get message response\n");
-        return;
+        return -1;
     }
 
     switch(msg.name)
     {
-        case 'E': fprintf(stderr, "Device reported error: %s", msg.params[0].s);
+        case 'E': 
+            fprintf(stderr, "Device reported error: %s", msg.params[0].s);
+            return 0;
         default:
-            fprintf(stderr, "Unkown message type %c\n", msg.name);        
+            fprintf(stderr, "Unkown message type %c\n", msg.name);
+            return -1 ;
     }
     
-
+    return 0;
 }
-
 
 
 int main(int argc, char** argv)
@@ -109,7 +113,9 @@ int main(int argc, char** argv)
         
         gpio_set(25, 1);
         usleep(500000);
-        response();
+        if(response()){
+            return 1;
+        }
         
 
         gpio_set(25, 0);

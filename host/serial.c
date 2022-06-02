@@ -10,11 +10,11 @@ static int serial_fd = -1;
 
 int open_serial_port(const char* device)
 {
-    fprintf(stderr,"Configuring serial port...\n");
+    fprintf(stderr, "Configuring serial port...\n");
     int fd = open(device, O_RDWR | O_NOCTTY | O_NONBLOCK);
     if (fd == -1)
     {
-        fprintf(stderr, "Could not open serial port device \"%s\"\n", device);
+        fprintf(stderr, "Error opening \"%s\"\n", device);
         return -1;
     }
 
@@ -22,7 +22,7 @@ int open_serial_port(const char* device)
     int result = tcflush(fd, TCIOFLUSH);
     if (result)
     {
-        fprintf(stderr, "Warning: tcflush failed"); // just a warning, not a fatal error
+        fprintf(stderr, "tcflush failed"); // just a warning, not a fatal error
     }
 
     // Get the current configuration of the serial port.
@@ -30,7 +30,7 @@ int open_serial_port(const char* device)
     result = tcgetattr(fd, &options);
     if (result)
     {
-        fprintf(stderr, "tcgetattr failed");
+        perror("tcgetattr failed");
         close(fd);
         return -1;
     }
@@ -47,12 +47,38 @@ int open_serial_port(const char* device)
     options.c_cc[VTIME] = 1;
     options.c_cc[VMIN] = 0;
 
-    cfsetospeed(&options, B115200);
-    
+    // This code only supports certain standard baud rates. Supporting
+    // non-standard baud rates should be possible but takes more work.
+    int baud_rate = 115200;
+    switch (baud_rate)
+    {
+    case 4800:
+        cfsetospeed(&options, B4800);
+        break;
+    case 9600:
+        cfsetospeed(&options, B9600);
+        break;
+    case 19200:
+        cfsetospeed(&options, B19200);
+        break;
+    case 38400:
+        cfsetospeed(&options, B38400);
+        break;
+    case 115200:
+        cfsetospeed(&options, B115200);
+        break;
+    default:
+        fprintf(stderr, "warning: baud rate %u is not supported, using 9600.\n",
+            baud_rate);
+        cfsetospeed(&options, B9600);
+        break;
+    }
+    cfsetispeed(&options, cfgetospeed(&options));
+
     result = tcsetattr(fd, TCSANOW, &options);
     if (result)
     {
-        fprintf(stderr, "tcsetattr failed");
+        perror("tcsetattr failed");
         close(fd);
         return -1;
     }
@@ -62,14 +88,9 @@ int open_serial_port(const char* device)
     flags = TIOCM_RTS | TIOCM_DTR;
     ioctl(fd, TIOCMBIS, &flags); // Set RTS pin
 
-    if(!fcntl(fd, F_SETFL, 0))
-    {
-        fprintf(stderr, "Could not set RTS/DTR\n");
-        close(fd);
-        return -1;
-    }
+    fcntl(fd, F_SETFL, 0);
 
-    fprintf(stderr, "Done serial config\n");
+    printf("Done serial config\n");
 
     serial_fd = fd;
     return fd;
@@ -77,18 +98,19 @@ int open_serial_port(const char* device)
 
 
 //Poll waiting for more
-static inline int wait_response(char* response, int len)
+static inline int wait_response(char* response_buff, int len)
 {
     if(serial_fd < 0)
     {
         fprintf(stderr, "Serial port is not yet open\n");
     }
 
-    int r = read(serial_fd, response, len);
-    for (; r <= 0; r = read(serial_fd, response, len))
+    int r = read(serial_fd, response_buff, len);
+    for (; r <= 0; r = read(serial_fd, response_buff, len))
     {
         usleep(500);
     }
+    printf("--> \"%.*s\"\n", r, response_buff);
     return r;
 }
 
@@ -99,11 +121,11 @@ static char* response = response_buf;
 static int response_rem = 0;
 
 //Buffered getchar from the serial port
-char serial_getchar()
+int serial_getchar()
 {
     if (response_rem <= 0)
     {
-        response_rem = wait_response(response, RESP_MAX);
+        response_rem = wait_response(response_buf, RESP_MAX);
         response = response_buf;
     }
 

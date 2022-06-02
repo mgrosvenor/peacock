@@ -2,6 +2,7 @@
 #include <ctype.h>
 #include <string.h>
 #include <stdlib.h>
+#include <stdio.h>
 
 #include "msg.h"
 
@@ -56,7 +57,7 @@ static int get_int(int32_t* out)
     result *= sign;
     *out = result;
 
-    return 0;
+    return c;
 }
 
 
@@ -77,22 +78,15 @@ static int get_str(char** out)
         str[i] = getchar_();       
     }
 
-    char c = getchar_();
-    if (c != ':')
-    {
-        error("Expected seperator ':'");
-        chomp();
-        return -1;
-    }
-
     *out = str;
 
-    return 0;
+    return getchar_();
 }
 
 int get_msg(msg_t* const msg)
 {
     msg->name = getchar_();
+    printf("msg->name='''%c'''\n", msg->name);
     if (!isalnum((unsigned)msg->name))
     {
         error("Cannot parse message name \"%c\"", msg->name);
@@ -103,12 +97,13 @@ int get_msg(msg_t* const msg)
     char sep = getchar_(); //Skip ':' seperator
     if (sep != ':')
     {
-        error("Expected seperator ':'");
+        error("Expected a seperator ':' but not found [0]");
         chomp();
         return -1;
     }
 
-    if (get_int(&msg->pcount))
+    int c = get_int(&msg->pcount);
+    if (c < 0)
     {
         error("Cannot parse parameter count");
         return -1;
@@ -121,10 +116,8 @@ int get_msg(msg_t* const msg)
         return -1;
     }
 
-    char c = 0;
     for (int i = 0; i < msg->pcount; i++)
     {
-        c = getchar_();
         if (c == '\n' && i < msg->pcount - 1)
         {
             error("Expected %i parameters but ran out at %i", msg->pcount, i + 1);
@@ -132,11 +125,21 @@ int get_msg(msg_t* const msg)
             return -1;
         }
 
+        if (c != ':')
+        {
+            error("Expected a seperator ':' but not found [1.%i]", i);
+            chomp();
+            return -1;
+        }
+
+        c = getchar_();
+
         switch (c)
         {
         case 'i': 
             msg->params[i].type = 'i';
-            if(get_int(&msg->params[i].i))
+            c = get_int(&msg->params[i].i);
+            if(c < 0)
             {
                 error("Could not get integer from parameter %i", i);
                 return -1;
@@ -145,7 +148,8 @@ int get_msg(msg_t* const msg)
 
         case 's':
             msg->params[i].type = 's';                
-            if(get_str(&msg->params->s))
+            c = get_str(&msg->params->s);
+            if(c < 0)
             {
                 error("Could not get string from parameter %i", i);
                 return -1;
@@ -177,10 +181,10 @@ int send_msg(const msg_t* const msg)
         switch(msg->params[i].type)
         {
             case 'i': 
-                result += send_str("i:%i", msg->params->i);
+                result += send_str(":i%i", msg->params[i].i);
                 break;
             case 's': 
-                result += send_str("s%i:%s", strlen(msg->params->s), msg->params->s);
+                result += send_str(":s%i:%s", strlen(msg->params[i].s), msg->params[i].s);
                 break;
             default:
                 error("Unknown parameter type \"%c\"", msg->params[i]);
