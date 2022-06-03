@@ -30,7 +30,9 @@ typedef struct {
 } msg_t;
 
 int get_msg(msg_t* const msg);
+void wait_init();
 int send_msg(const msg_t* const msg);
+
 
 
 #endif // MSG

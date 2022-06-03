@@ -18,11 +18,12 @@ pico_sdk_init()
 add_executable(peacock_dev
         peacock_dev.c ../msg/msg.c
 )
+target_compile_definitions(peacock_dev PUBLIC
+        PICO_STDIO_USB_CONNECT_WAIT_TIMEOUT_MS=-1
+        PICO_STDIO_DEFAULT_CRLF=0
+)
 
 target_link_libraries(peacock_dev pico_stdlib)
-
-#add_compile_options(-Wall -Werror -Eextra) 
-# pull in common dependencies
 
 set(CMAKE_C_FLAGS "-march=armv6-m -Wall -Werror -Wextra")
 set(CMAKE_C_FLAGS_DEBUG "-g")

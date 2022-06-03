@@ -17,20 +17,26 @@ void error(const char* fmt, ...)
 {
     va_list args;
     va_start(args, fmt);
-    vprintf(fmt, args);
-    printf("\n");
+    fprintf(stderr, "HostErr: ");
+    vfprintf(stderr, fmt, args);
+    fprintf(stderr,"\n");
     fflush(stderr);
     va_end(args);
 }
 
 __attribute__((format(printf, 1, 2)))
-int send_str(const char* fmt, ...)
+int sendf(const char* fmt, ...)
 {
     va_list args;
     va_start(args, fmt);
-    vprintf(fmt,args);    
     const int result = serial_vsend_str(fmt, args);
     va_end(args);
+    
+    // va_start(args, fmt);
+    // fprintf(stderr, "Debug: sending: ");
+    // vfprintf(stderr, fmt, args);
+    // va_end(args);
+
     return result;
 }
 
@@ -68,6 +74,7 @@ static inline int gpio_set(int pin, int val)
     return send_msg(&msg);
 }
 
+
 int response()
 {
     msg_t msg = { 0 };
@@ -80,7 +87,7 @@ int response()
     switch(msg.name)
     {
         case 'E': 
-            fprintf(stderr, "Device reported error: %s", msg.params[0].s);
+            fprintf(stderr, "Device error: %s\n", msg.params[0].s);
             return 0;
         default:
             fprintf(stderr, "Unkown message type %c\n", msg.name);
@@ -88,6 +95,14 @@ int response()
     }
     
     return 0;
+}
+
+void process_responses()
+{
+    while (serial_peek())
+    {
+        response();
+    }
 }
 
 
@@ -98,7 +113,7 @@ int main(int argc, char** argv)
         fprintf(stderr, "usage: serial DEV\n");
         return -1;
     }
-    printf("starting\n");
+    printf("Host starting\n");
 
     const char* device = argv[1];
 
@@ -108,19 +123,19 @@ int main(int argc, char** argv)
         return 1;
     }
 
+    process_responses();
+
+    int sleep = 10*10000;
     for (int i = 0;; i++)
     {
         
         gpio_set(25, 1);
-        usleep(500000);
-        if(response()){
-            return 1;
-        }
+        usleep(sleep);
+//        process_responses();
         
-
-        gpio_set(25, 0);
-        usleep(500000);
-        response();
+        gpio_set(25, -1);
+        usleep(sleep);
+//        process_responses();
     }
 
     close(fd);

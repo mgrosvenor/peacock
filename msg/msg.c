@@ -9,7 +9,7 @@
 //These functions need to be defined by the user
 extern void error(const char* fmt, ...);
 extern int getchar_();
-extern int send_str(const char* fmt, ...);
+extern int sendf(const char* fmt, ...);
 
 //Consume all characters until a newline is found
 static inline void chomp()
@@ -65,9 +65,17 @@ static int get_str(char** out)
 {
     *out = NULL;    
     int32_t slen = 0;
-    if (get_int(&slen))
+    int c = get_int(&slen);
+    if ( c < 0)
     {
         error("Could not get string length from parameter");
+        return -1;
+    }
+
+    if (c != ':')
+    {
+        error("Expected a seperator ':' but not found [2]");
+        chomp();
         return -1;
     }
 
@@ -83,10 +91,71 @@ static int get_str(char** out)
     return getchar_();
 }
 
+// #define JUNK_BUFF 4096
+// void wait_init()
+// {
+//     error("Waiting for init...\n");
+//     char buff[JUNK_BUFF] = { 0 };
+//     char* b = buff;
+//     //Chomp away any junk until the start of a message
+//     int c = -1; 
+//     for(c = getchar_(); c != 'X'; c = getchar_())
+//     {
+//         int l = sprintf(b, "0x%0X[%c] ", c, isalnum(c) ? c : '.');
+//         b += l;
+//         if (b >= buff + JUNK_BUFF)
+//         {
+//             error("too much junk\n");
+//             return;
+//         }
+//     }
+//     error("chomp=%s", buff);
+
+//     error("msg->name='''%c'''\n", c);
+//     if (!isalnum((unsigned)c))
+//     {
+//         error("Cannot parse message name \"%c\"", c);
+//         chomp();
+//         return;
+//     }
+
+//     c = getchar_(); //Skip ':' seperator
+//     if (c != ':')
+//     {
+//         error("Expected a seperator ':' but not found [0]");
+//         chomp();
+//         return;
+//     }
+
+//     c = getchar_(); //Skip ':' seperator
+//     if (c != '0')
+//     {
+//         error("Expected no parameters but got '%c'", c);
+//         chomp();
+//         return;
+//     }
+
+//     c = getchar_();
+//     if (c == '\r')
+//     {
+//         c = getchar_();
+//     }
+
+//     if (c != '\n')
+//     {
+//         error("Expected end of message but found '%c'\n");
+//         chomp();
+//         return;
+//     }
+
+// }
+
+
+
 int get_msg(msg_t* const msg)
 {
-    msg->name = getchar_();
-    printf("msg->name='''%c'''\n", msg->name);
+    int c = getchar_();
+    msg->name = c;
     if (!isalnum((unsigned)msg->name))
     {
         error("Cannot parse message name \"%c\"", msg->name);
@@ -102,7 +171,7 @@ int get_msg(msg_t* const msg)
         return -1;
     }
 
-    int c = get_int(&msg->pcount);
+    c = get_int(&msg->pcount);
     if (c < 0)
     {
         error("Cannot parse parameter count");
@@ -163,9 +232,14 @@ int get_msg(msg_t* const msg)
         }
     }
 
+    if (c == '\r')
+    {
+        c = getchar_();
+    }
+
     if (c != '\n')
     {
-        error("Expected %i parameters but got too many", msg->pcount);
+        error("Expected %i parameters but got too many (c=0x%02X)", msg->pcount, c, c);
         chomp();
         return -1;
     }
@@ -176,22 +250,22 @@ int get_msg(msg_t* const msg)
 
 int send_msg(const msg_t* const msg)
 {    
-    int result = send_str("%c:%i", msg->name, msg->pcount);
+    int result = sendf("%c:%i", msg->name, msg->pcount);
     for(int i = 0; i < msg->pcount; i++){
         switch(msg->params[i].type)
         {
             case 'i': 
-                result += send_str(":i%i", msg->params[i].i);
+                result += sendf(":i%i", msg->params[i].i);
                 break;
             case 's': 
-                result += send_str(":s%i:%s", strlen(msg->params[i].s), msg->params[i].s);
+                result += sendf(":s%i:%s", strlen(msg->params[i].s), msg->params[i].s);
                 break;
             default:
                 error("Unknown parameter type \"%c\"", msg->params[i]);
                 return -1; 
         }        
     }
-    result += send_str("\n");
+    result += sendf("\n");
 
     return result;
 }

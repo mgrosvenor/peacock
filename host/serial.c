@@ -10,7 +10,6 @@ static int serial_fd = -1;
 
 int open_serial_port(const char* device)
 {
-    fprintf(stderr, "Configuring serial port...\n");
     int fd = open(device, O_RDWR | O_NOCTTY | O_NONBLOCK);
     if (fd == -1)
     {
@@ -90,8 +89,6 @@ int open_serial_port(const char* device)
 
     fcntl(fd, F_SETFL, 0);
 
-    printf("Done serial config\n");
-
     serial_fd = fd;
     return fd;
 }
@@ -110,7 +107,6 @@ static inline int wait_response(char* response_buff, int len)
     {
         usleep(500);
     }
-    printf("--> \"%.*s\"\n", r, response_buff);
     return r;
 }
 
@@ -119,6 +115,32 @@ static inline int wait_response(char* response_buff, int len)
 static char response_buf[RESP_MAX] = { 0 };
 static char* response = response_buf;
 static int response_rem = 0;
+
+//Are there more bytes to consume, return +ve if yes, 0 if no
+int serial_peek()
+{
+    if (serial_fd < 0)
+    {
+        fprintf(stderr, "Serial port is not yet open\n");
+    }
+
+    if(response_rem > 0)
+    {
+        return response_rem;
+    }
+
+    int r = read(serial_fd, response_buf, RESP_MAX);
+    if(r <= 0)
+    {
+        return 0;
+    }
+    response = response_buf;
+    response_rem = r;
+
+    return r;
+}
+
+
 
 //Buffered getchar from the serial port
 int serial_getchar()
@@ -137,5 +159,7 @@ int serial_getchar()
 
 int serial_vsend_str(const char* fmt, va_list args)
 {
-    return vdprintf(serial_fd, fmt, args);
+    int ret = vdprintf(serial_fd, fmt, args);
+    fsync(serial_fd);
+    return ret;
 }
