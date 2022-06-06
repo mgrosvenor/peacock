@@ -149,6 +149,8 @@ int serial_getchar()
     {
         response_rem = wait_response(response_buf, RESP_MAX);
         response = response_buf;
+        // fprintf(stderr,"Host debug. Received: %.*s", response_rem, response_buf);
+        // fflush(stderr);
     }
 
     const char result = response[0];
@@ -160,6 +162,11 @@ int serial_getchar()
 int serial_vsend_str(const char* fmt, va_list args)
 {
     int ret = vdprintf(serial_fd, fmt, args);
-    fsync(serial_fd);
+    //fsync(serial_fd);
     return ret;
+}
+
+void serial_close()
+{
+    close(serial_fd);
 }

@@ -3,55 +3,157 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <stdarg.h>
 
 #include "msg.h"
 
-//These functions need to be defined by the user
-extern void error(const char* fmt, ...);
-extern int getchar_();
-extern int sendf(const char* fmt, ...);
+
+static msg_funcs_t msgs = { 0 };
+void init_msgs(const msg_funcs_t* msg_funcs)
+{
+    msgs = *msg_funcs;
+}
 
 //Consume all characters until a newline is found
 static inline void chomp()
 {
-    for (char c = getchar_(); c != '\n'; c = getchar_())
+    for (char c = msgs.getchar(); c != '\n'; c = msgs.getchar())
     {
     }
 }
+
+bool param_b(const msg_t* msg, int idx)
+{
+    if(idx < 0 || idx >= msg->pcount)
+    {
+        msgs.errorf("Parameter index %i is out of range [0,%i]\n", idx, (int)msg->pcount -1);
+        return -1;
+    }
+
+    const param_t* param = &msg->params[idx];
+    if(param->type != 'b')
+    {
+        msgs.errorf("Parameter type is not 'b' for bool. Found '%c'\n", param->type);
+        return -1;
+    }
+
+    return param->b;
+}
+
+char param_c(const msg_t* msg, int idx)
+{
+    if (idx < 0 || idx >= msg->pcount)
+    {
+        msgs.errorf("Parameter index %i is out of range [0,%i]\n", idx, (int)msg->pcount - 1);
+        return -1;
+    }
+
+    const param_t* param = &msg->params[idx];
+    if (param->type != 'c')
+    {
+        msgs.errorf("Parameter type is not 'c' for char. Found '%c'\n", param->type);
+        return -1;
+    }
+
+    return param->c;
+}
+
+int param_i(const msg_t* msg, int idx)
+{
+    if (idx < 0 || idx >= msg->pcount)
+    {
+        msgs.errorf("Parameter index %i is out of range [0,%i]\n", idx, (int)msg->pcount - 1);
+        return -1;
+    }
+
+    const param_t* param = &msg->params[idx];
+    if (param->type != 'i')
+    {
+        msgs.errorf("Parameter type is not 'i' for int. Found '%c'\n", param->type);
+        return -1;
+    }
+
+    return param->i;
+}
+
+char* param_s(const msg_t* msg, int idx)
+{
+    if (idx < 0 || idx >= msg->pcount)
+    {
+        msgs.errorf("Parameter index %i is out of range [0,%i]\n", idx, (int)msg->pcount - 1);
+        return NULL;
+    }
+
+    const param_t* param = &msg->params[idx];
+    if (param->type != 's')
+    {
+        msgs.errorf("Parameter type is not 's' for string. Found '%c'\n", param->type);
+        return NULL;
+    }
+
+    return param->s;
+}
+
+
+static int get_bool(bool* out)
+{
+    int c = msgs.getchar();
+    switch (c)
+    {
+        case '0': *out = false; break;
+        case '1': *out = true;  break;
+        default:
+            msgs.errorf("Cannot parse bool. Expected [0,1] but got \"%c\"", c);
+    }    
+
+    return msgs.getchar();
+}
+
+
+static int get_alnum(char* out)
+{
+    int c = msgs.getchar();
+    if(!isalnum(c))
+    {
+        msgs.errorf("Cannot parse char. Expected [a-zA-Z0-9] but got \"%c\"", c);
+    }
+
+    *out = c;
+
+    return msgs.getchar();
+}
+
 
 
 static int get_int(int32_t* out)
 {
     char c = 0;
-    int mult = 1;
     int sign = 1;
 
     int32_t result = 0;
 
     //Extract the sign from the first character (if it's there)
-    c = getchar_();
+    c = msgs.getchar();
     if (c == '-')
     {
         sign = -1;
-        c = getchar_();
+        c = msgs.getchar();
     }
     else if (c == '+')
     {
-        c = getchar_();
+        c = msgs.getchar();
     }
 
-    for (; c != ':' && c != '\n'; c = getchar_())
+    for (; c != ':' && c != '\n'; c = msgs.getchar())
     {
         if (!isdigit(c))
         {
-            error("Cannot parse parameter. Expected a digit but got \"%c\"", c);
+            msgs.errorf("Cannot parse parameter. Expected a digit but got \"%c\"", c);
             chomp();
             return -1;
         }
 
-        result *= mult;
-        result += (c - '0');
-        mult *= 10;
+        result = result * 10 + (c - '0');
     }
 
     result *= sign;
@@ -68,13 +170,13 @@ static int get_str(char** out)
     int c = get_int(&slen);
     if ( c < 0)
     {
-        error("Could not get string length from parameter");
+        msgs.errorf("Could not get string length from parameter");
         return -1;
     }
 
     if (c != ':')
     {
-        error("Expected a seperator ':' but not found [2]");
+        msgs.errorf("Expected a seperator ':' but not found [2]");
         chomp();
         return -1;
     }
@@ -83,134 +185,109 @@ static int get_str(char** out)
 
     for (int i = 0; i < slen; i++)
     {
-        str[i] = getchar_();       
+        str[i] = msgs.getchar();       
     }
 
     *out = str;
 
-    return getchar_();
+    return msgs.getchar();
 }
-
-// #define JUNK_BUFF 4096
-// void wait_init()
-// {
-//     error("Waiting for init...\n");
-//     char buff[JUNK_BUFF] = { 0 };
-//     char* b = buff;
-//     //Chomp away any junk until the start of a message
-//     int c = -1; 
-//     for(c = getchar_(); c != 'X'; c = getchar_())
-//     {
-//         int l = sprintf(b, "0x%0X[%c] ", c, isalnum(c) ? c : '.');
-//         b += l;
-//         if (b >= buff + JUNK_BUFF)
-//         {
-//             error("too much junk\n");
-//             return;
-//         }
-//     }
-//     error("chomp=%s", buff);
-
-//     error("msg->name='''%c'''\n", c);
-//     if (!isalnum((unsigned)c))
-//     {
-//         error("Cannot parse message name \"%c\"", c);
-//         chomp();
-//         return;
-//     }
-
-//     c = getchar_(); //Skip ':' seperator
-//     if (c != ':')
-//     {
-//         error("Expected a seperator ':' but not found [0]");
-//         chomp();
-//         return;
-//     }
-
-//     c = getchar_(); //Skip ':' seperator
-//     if (c != '0')
-//     {
-//         error("Expected no parameters but got '%c'", c);
-//         chomp();
-//         return;
-//     }
-
-//     c = getchar_();
-//     if (c == '\r')
-//     {
-//         c = getchar_();
-//     }
-
-//     if (c != '\n')
-//     {
-//         error("Expected end of message but found '%c'\n");
-//         chomp();
-//         return;
-//     }
-
-// }
-
-
 
 int get_msg(msg_t* const msg)
 {
-    int c = getchar_();
-    msg->name = c;
-    if (!isalnum((unsigned)msg->name))
+    const int n1  = msgs.getchar();
+    msg->name[0] = n1;
+    if (!isalnum((unsigned)msg->name[0]))
     {
-        error("Cannot parse message name \"%c\"", msg->name);
+        msgs.errorf("Cannot parse message name[0] \"0x%02X\"", msg->name[0]);
         chomp();
         return -1;
     }
 
-    char sep = getchar_(); //Skip ':' seperator
+    const int n2 = msgs.getchar();
+    msg->name[1] = n2;
+    if (!isalnum((unsigned)msg->name[1]))
+    {
+        msgs.errorf("Cannot parse message name[1] \"0x%02X\"", msg->name[1]);
+        chomp();
+        return -1;
+    }
+
+    const int sep = msgs.getchar(); //Skip ':' seperator
     if (sep != ':')
     {
-        error("Expected a seperator ':' but not found [0]");
+        msgs.errorf("Expected a seperator ':' but not found [0]");
         chomp();
         return -1;
     }
 
-    c = get_int(&msg->pcount);
-    if (c < 0)
+    const int err = get_int(&msg->pcount);
+    if (err < 0)
     {
-        error("Cannot parse parameter count");
+        msgs.errorf("Cannot parse parameter count");
+        chomp();
         return -1;
     }    
 
-    if (msg->pcount > MAX_PARAM)
+    if (msg->pcount < 0)
     {
-        error("Too many parameters. Got %i but maximum is %i", msg->pcount, MAX_PARAM);
+        msgs.errorf("Cannot have a negative parameter count");
         chomp();
         return -1;
     }
 
+    if (msg->pcount > MAX_PARAM)
+    {
+        msgs.errorf("Too many parameters. Got %i but maximum is %i", (int)msg->pcount, MAX_PARAM);
+        chomp();
+        return -1;
+    }
+
+    int c = err; //Grab the last returned character
     for (int i = 0; i < msg->pcount; i++)
     {
         if (c == '\n' && i < msg->pcount - 1)
         {
-            error("Expected %i parameters but ran out at %i", msg->pcount, i + 1);
+            msgs.errorf("Expected %i parameters but ran out at %i", (int)msg->pcount, i + 1);
             chomp();
             return -1;
         }
 
         if (c != ':')
         {
-            error("Expected a seperator ':' but not found [1.%i]", i);
+            msgs.errorf("Expected a seperator ':' but not found [1.%i]", i);
             chomp();
             return -1;
         }
 
-        c = getchar_();
+        c = msgs.getchar();
 
         switch (c)
         {
+        case 'b':
+            msg->params[i].type = 'b';
+            c = get_bool(&msg->params[i].b);
+            if (c < 0)
+            {
+                msgs.errorf("Could not get bool from parameter %i", i);
+                return -1;
+            }
+            break;
+        case 'c':
+            msg->params[i].type = 'c';
+            c = get_alnum(&msg->params[i].c);
+            if (c < 0)
+            {
+                msgs.errorf("Could not get char from parameter %i", i);
+                return -1;
+            }
+            break;
         case 'i': 
             msg->params[i].type = 'i';
             c = get_int(&msg->params[i].i);
             if(c < 0)
             {
-                error("Could not get integer from parameter %i", i);
+                msgs.errorf("Could not get integer from parameter %i", i);
                 return -1;
             }
             break;
@@ -220,13 +297,13 @@ int get_msg(msg_t* const msg)
             c = get_str(&msg->params->s);
             if(c < 0)
             {
-                error("Could not get string from parameter %i", i);
+                msgs.errorf("Could not get string from parameter %i", i);
                 return -1;
             }                                     
             break;
 
         default:
-            error("Unexpected type \"%c\" for parameter %i", c, i);
+            msgs.errorf("Unexpected type \"%c\" for parameter %i", c, i);
             chomp();
             return -1; 
         }
@@ -234,12 +311,12 @@ int get_msg(msg_t* const msg)
 
     if (c == '\r')
     {
-        c = getchar_();
+        c = msgs.getchar();
     }
 
     if (c != '\n')
     {
-        error("Expected %i parameters but got too many (c=0x%02X)", msg->pcount, c, c);
+        msgs.errorf("Expected %i parameters but got too many (c=0x%02X)", (int)msg->pcount, c);
         chomp();
         return -1;
     }
@@ -250,22 +327,29 @@ int get_msg(msg_t* const msg)
 
 int send_msg(const msg_t* const msg)
 {    
-    int result = sendf("%c:%i", msg->name, msg->pcount);
+    int result = msgs.sendf("%c%c:%i", msg->name[0], msg->name[1], (int)msg->pcount);
     for(int i = 0; i < msg->pcount; i++){
         switch(msg->params[i].type)
         {
-            case 'i': 
-                result += sendf(":i%i", msg->params[i].i);
-                break;
-            case 's': 
-                result += sendf(":s%i:%s", strlen(msg->params[i].s), msg->params[i].s);
-                break;
-            default:
-                error("Unknown parameter type \"%c\"", msg->params[i]);
-                return -1; 
+        case 'c': //Char
+            result += msgs.sendf(":c%c", msg->params[i].c);
+            break;
+        case 'b': //Bool 
+            result += msgs.sendf(":b%c", msg->params[i].b ? '1' : '0');
+            break;
+        case 'i': //Integer (signed)
+            result += msgs.sendf(":i%i", (int)msg->params[i].i);
+            break;
+        case 's':  //String (with integer length)
+            result += msgs.sendf(":s%i:%s", (int)strlen(msg->params[i].s), msg->params[i].s);
+            break;
+        default:
+            //Can't send an error here because we'll get into a broken state. So just put in a dummy.
+            result += msgs.sendf(":x%04x", (int)msg->params[i].i);
+            break;            
         }        
     }
-    result += sendf("\n");
+    result += msgs.sendf("\n");
 
     return result;
 }

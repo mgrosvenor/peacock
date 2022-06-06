@@ -7,7 +7,7 @@ mkdir -p build
 cd build
 cmake ..
 cmake --build .
-cp peacock_host ../../bin/
+cp peacock_test ../../bin/
 cd ../../
 
 

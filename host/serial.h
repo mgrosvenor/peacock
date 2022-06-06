@@ -9,5 +9,6 @@ int serial_getchar();
 int serial_peek();
 
 int serial_vsend_str(const char* fmt, va_list args);
+void serial_close();
 
 #endif // SERIAL
