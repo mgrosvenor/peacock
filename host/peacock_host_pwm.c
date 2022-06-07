@@ -18,58 +18,37 @@ int pck_pwm_slice_channel_num(const int pin, int* slice_num, int* channel_num)
         return -1;
     }
 
-    msg_t msg =
-    {
-        .name = {'P', 's'},
-        .pcount = 1,
-        .params =
-        {
-            INT(pin),
-        }
-    };
+    const char n0 = 'P'; //PWM group
+    const char n1 = 's'; //Slice/channel function
 
-    send_msg(&msg);
+    msg_t msg = INIT_MSG(n0, n1, 1);
+    SET_MSG_PARAM_I(&msg, 0, pin);
+    send_msg(&msg);    
 
-    const int max_attempts = 100;
-    for (int i = 0; get_response(&msg); i++)
+    if(pck_get_response(&msg))
     {
-        if (i > max_attempts)
-        {
-            errorf("Made %i attempts to get response but found none\n", max_attempts);
-            return -1;
-        }
+        errorf("Could not get message PWM slice/channel response\n");
     }
 
-    if (msg.name[0] != 'P' && msg.name[1] != 's')
+    int success = is_msg_success(&msg, n0, n1, 3);
+    if(success < 1)
     {
-        errorf("Unexpected reply message type. Expected 'Ps' but got '%c%c'\n", msg.name[0], msg.name[1]);
+        errorf("PWM slice/channel fetch command failed!\n");
+        return -1;
+    }    
+
+    const int msg_pin   = param_i(&msg, 0);
+    const int msg_slice = param_i(&msg, 1);
+    const int msg_chan  = param_i(&msg, 2);
+
+    if(msg_pin != pin)
+    {
+        errorf("Got the wrong pin back. Expected %i, but got %i\n", pin, msg_pin);
         return -1;
     }
 
-    if (msg.pcount != 3)
-    {
-        errorf("Unexpected parameter count. Expected 3 but got %i\n", msg.pcount);
-        return -1;
-    }
-
-    const int rx_pin     = param_i(&msg, 0);
-    const int rx_slice   = param_i(&msg, 1);
-    const int rx_channel = param_i(&msg, 2);
-
-    if (rx_pin != pin)
-    {
-        errorf("Wrong pin numer! Expected %i but got %i\n", pin, rx_pin);
-        return -1;
-    }
-
-    if(!_slice_valid(rx_slice))
-    {
-        errorf("Invalid slice returned from device %i\n", rx_slice);
-        return -1;
-    }
-
-    *slice_num   = rx_slice;
-    *channel_num = rx_channel;
+    *slice_num   = msg_slice;
+    *channel_num = msg_chan;
 
     return 0;
 }
@@ -92,58 +71,37 @@ int pck_pwm_config(const int slice_num, const char mode, const int div_int, cons
         return -1;
     }
 
-    msg_t msg = {
-        .name = { 'P', 'c' },
-            .pcount = 6,
-            .params =
-        {
-            INT(slice_num),
-            CHAR(mode),
-            INT(div_int),
-            INT(div_frc),
-            INT(wrap),
-            BOOL(phase_correct),
-        }
-    };
+    if( div_int == 0 && div_frc == 0)
+    {
+        errorf("Cannot set clock divider to 0\n");
+        return -1;
+    }
 
+    if(div_int < 0 || div_frc < 0)
+    {
+        errorf("Cannot set clock divider to negative value\n");
+        return -1;
+    }
+
+    if(wrap <= 0 || wrap > 0xFFFF)
+    {
+        errorf("Wrap value range is [1..%i], but got %i\n", 0xFFFF, wrap );
+        return -1;
+    }
+
+    const char n0 = 'P'; //PWM group
+    const char n1 = 'c'; //Configure PWM slice function
+
+    msg_t msg = INIT_MSG(n0, n1, 6);
+    SET_MSG_PARAM_I(&msg, 0, slice_num);
+    SET_MSG_PARAM_C(&msg, 1, mode);
+    SET_MSG_PARAM_I(&msg, 2, div_int);
+    SET_MSG_PARAM_I(&msg, 3, div_frc);
+    SET_MSG_PARAM_I(&msg, 4, wrap);
+    SET_MSG_PARAM_B(&msg, 5, phase_correct);
     send_msg(&msg);
-    const int max_attempts = 100;
-    for (int i = 0; get_response(&msg); i++)
-    {
-        if (i > max_attempts)
-        {
-            errorf("Made %i attempts to get response but found none\n", max_attempts);
-            return -1;
-        }
-    }
-
-    if (msg.name[0] != 'P' && msg.name[1] != 'c')
-    {
-        errorf("Unexpected reply message type. Expected 'Pc' but got '%c%c'\n", msg.name[0], msg.name[1]);
-        return -1;
-    }
-
-    if (msg.pcount != 2)
-    {
-        errorf("Unexpected parameter count. Expected 3 but got %i\n", msg.pcount);
-        return -1;
-    }
-
-    const int rx_slice = param_i(&msg, 0);
-    const int result = param_i(&msg, 1);
-
-    if (rx_slice != slice_num)
-    {
-        errorf("Wrong slice numer! Expected %i but got %i\n", slice_num, rx_slice);
-        return -1;
-    }
-
-    if(result)
-    {
-        errorf("Failed setting config. Device side failure: %i\n", result);
-    }
     
-    return result;
+    return pck_success(n0, n1, 0);
 }
 
 
@@ -151,22 +109,24 @@ int pck_pwm_level(const int pin, const int level)
 {
     if (!pin_valid(pin))
     {
-        errorf("Invalid pin supplied %i\n", pin);
+        errorf("Cannot set level with invalid pin %i\n", pin);
         return -1;
     }
 
-    msg_t msg = {
-        .name = { 'P', 'l' },
-            .pcount = 2,
-            .params =
-        {
-            INT(pin),
-            INT(level),
-        }
-    };
+    if(level <= 0 || level > 0xFFFF)
+    {
+        errorf("Level value range is [1..%i], but got %i\n", 0xFFFF, level );
+        return -1;
+    }
 
+    const char n0 = 'P'; //PWM group
+    const char n1 = 'l'; //Set level function
+
+    msg_t msg = INIT_MSG(n0, n1, 2);
+    SET_MSG_PARAM_I(&msg, 0, pin);
+    SET_MSG_PARAM_I(&msg, 1, level);
     send_msg(&msg);
-    return 0;
+    return pck_success(n0, n1, 0);
 }
 
 
@@ -178,18 +138,14 @@ int pck_pwm_enable(const int slice, bool enabled)
         return -1;
     }
 
-    msg_t msg = {
-        .name = { 'P', 'e' },
-            .pcount = 2,
-            .params =
-        {
-            INT(slice),
-            BOOL(enabled),
-        }
-    };
+    const char n0 = 'P'; //PWM group
+    const char n1 = 'e'; //Enable PWM function
 
+    msg_t msg = INIT_MSG(n0, n1, 2);
+    SET_MSG_PARAM_I(&msg, 0, slice);
+    SET_MSG_PARAM_B(&msg, 1, enabled);
     send_msg(&msg);
-    return 0;
+    return pck_success(n0, n1, 0);
 }
 
 
@@ -201,52 +157,39 @@ int pck_pwm_get_counter(const int slice, pwm_count_t* count)
         return -1;
     }
 
-    msg_t msg =
-    {
-        .name = {'P', 'C'},
-        .pcount = 1,
-        .params =
-        {
-            INT(slice),
-        }
-    };
+    const char n0 = 'P'; //PWM group
+    const char n1 = 'C'; //get counter function
 
+    msg_t msg = INIT_MSG(n0, n1, 2);
+    SET_MSG_PARAM_I(&msg, 0, slice);
     send_msg(&msg);
-
-    const int max_attempts = 100;
-    for (int i = 0; get_response(&msg); i++)
+    
+    if(pck_get_response(&msg))
     {
-        if (i > max_attempts)
-        {
-            errorf("Made %i attempts to get response but found none\n", max_attempts);
-            return -1;
-        }
+        errorf("Could not get message PWM counter fetch response\n");
     }
 
-    if (msg.name[0] != 'P' && msg.name[1] != 'C')
+    int success = is_msg_success(&msg, n0, n1, 4);
+    if(success < 1)
     {
-        errorf("Unexpected reply message type. Expected 'PC' but got '%c%c'\n", msg.name[0], msg.name[1]);
+        errorf("PWM counter fetch command failed!\n");
+        return -1;
+    }    
+
+    const int msg_slice  = param_i(&msg, 0);
+    const int msg_count  = param_i(&msg, 1);
+    const int msg_ts_lo  = param_i(&msg, 2);
+    const int msg_ts_hi  = param_i(&msg, 3);
+
+    if(msg_slice != slice)
+    {
+        errorf("Got the wrong slice back. Expected %i, but got %i\n", slice, msg_slice);
         return -1;
     }
 
-    if (msg.pcount != 3)
-    {
-        errorf("Unexpected parameter count. Expected 3 but got %i\n", msg.pcount);
-        return -1;
-    }
-
-    const int rx_slice = param_i(&msg, 0);
-    const int rx_count = param_i(&msg, 1);
-    const int rx_ts    = param_i(&msg, 2);
-
-    if (rx_slice != slice)
-    {
-        errorf("Wrong slice numer! Expected %i but got %i\n", slice, rx_slice);
-        return -1;
-    }
-
-    count->count = rx_count;
-    count->now_ts = rx_ts;
+    count->count = msg_count;
+    count->ts_lo = msg_ts_lo;
+    count->ts_hi = msg_ts_hi;
 
     return 0;
 }

@@ -9,9 +9,10 @@ int pck_pwm_level(const int pin, const int level);
 int pck_pwm_enable(const int slice, bool enabled);
 
 typedef struct
-{
-    int now_ts;
+{    
     int count;
+    int ts_lo;
+    int ts_hi;
 } pwm_count_t;
 int pck_pwm_get_counter(const int slice, pwm_count_t* count);
 

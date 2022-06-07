@@ -24,177 +24,74 @@
 #include "peacock_dev_pwm.h"
 
 
-static inline int run_util_cmd(const msg_t* msg)
+static inline msg_t run_util_cmd(const msg_t* const msg, const char n0, const char n1)
 {
-    switch (msg->name[1])
+    msg_t result = INIT_RMSG(n0, n1, 0);
+    SET_MSG_SUCCESS(&result, false);
+    switch (n1)
     {
     case 's': //Sleep (micros)
     {
         const int sleep_us = param_i(msg, 0);
         busy_wait_us_32(sleep_us);
-        return 0;
+        SET_MSG_SUCCESS(&result, true);
+        return result;
     }    
 
     default:
-        errorf("Unknown util command \"%c\"", msg->name[1]);
-        return -1;
-    }
-}
-
-static inline int run_pwm_cmd(const msg_t* msg)
-{
-    switch (msg->name[1])
-    {
-    case 's': //Pin number to slice/channel number
-    {
-        const int pin_num = param_i(msg, 0);
-        int slice_num = -1;
-        int channel_num = -1;
-        const int err = pck_pwm_slice_channel_num(pin_num, &slice_num, &channel_num);
-        if(err < 0) return err;
-
-        const msg_t msg =
-        {
-            .name = { 'P', 's'},
-            .pcount = 3,
-            .params = 
-            {
-                INT(pin_num),
-                INT(slice_num),
-                INT(channel_num)
-            }
-        };
-        send_msg(&msg);
-        return 0;
-    }
-    case 'c': //Configure slice
-    {
-        const int slice_num = param_i(msg, 0); 
-        const int result = pck_pwm_config
-        (
-            slice_num, //Slice
-            param_c(msg, 1), //Mode
-            param_i(msg, 2), //Div int
-            param_i(msg, 3), //Div frac
-            param_i(msg, 4), //Wrap
-            param_b(msg, 5)  //Phase correct
-        );
-        const msg_t msg =
-        {
-            .name = { 'P', 'c'},
-            .pcount = 2,
-            .params =
-            {
-                INT(slice_num),
-                INT(result)
-            }
-        };
-        send_msg(&msg);
+        errorf("Unknown util command '%c'\n", n1);
         return result;
     }
-    case 'l': //Set level (duty cycle = level / wrap)
-        return pck_pwm_level
-        (
-            param_i(msg, 0), //Pin
-            param_i(msg, 1)  //Level
-        );
+}
 
-    case 'e': // Enable PWM output on slice
-        return pck_pwm_enable
-        (
-            param_i(msg, 0), //Slice
-            param_b(msg, 1)  //Enabled
-        );
-
-    case 'C': // Get the pwm counter value (and timestamp when we got it)
+static inline msg_t run_pwm_cmd(const msg_t* const msg, const char n0, const char n1)
+{
+    switch (n1)
     {
-        pwm_count_t cnt = {0};
-        const int slice_num = param_i(msg, 0);
-        const int err = pck_pwm_get_counter(slice_num, &cnt);
-        if(err) return err; 
-
-        const msg_t msg = 
-        {
-            .name = {'P', 'c'},
-            .pcount = 3,
-            .params = 
-            {
-                INT(slice_num),
-                INT(cnt.count),
-                INT(cnt.now_ts)
-            }
-        };
-
-        send_msg(&msg);
-        return 0;
-    }
-        
+    case 's': return pck_pwm_slice_channel_num(msg, n0, n1);
+    case 'c': return pck_pwm_config(msg, n0, n1);
+    case 'l': return pck_pwm_level(msg, n0, n1);
+    case 'e': return pck_pwm_enable(msg, n0, n1);
+    case 'C': return pck_pwm_get_counter(msg, n0, n1);
     default:
-        errorf("Unknown PWM command \"%c\"", msg->name[1]);
-        return -1;
+        errorf("Unknown PWM command \"%c\"", n1);
+        msg_t result = INIT_RMSG(n0, n1, 0);
+        SET_MSG_SUCCESS(&result, false);
+        return result;
     }
 }
 
-static inline int run_gpio_cmd(const msg_t* msg)
+static inline msg_t run_gpio_cmd(const msg_t* const msg, const char n0, const char n1)
 {
-    switch (msg->name[1])
+    switch (n1)
     {
-    case 'o': 
-        return pck_gpio_out
-        (
-            param_i(msg, 0), //Pin
-            param_i(msg, 1)  //Val
-        ); 
-    case 'i': 
-    {
-        const int pin = param_i(msg, 0);
-        const int val = pck_gpio_in(pin);
-        if (val < 0) return val;
-
-        const msg_t msg =
-        {
-            .name = { 'G', 'i'},
-            .pcount = 2,
-            .params =
-            {
-                INT(pin),
-                BOOL(val)
-            }
-        };
-
-        send_msg(&msg);
-        return 0;
-    }
-    case 'p':  //Set up pull up/downs
-        return pck_gpio_pull
-        (
-            param_i(msg, 0), //Pin
-            param_b(msg, 1), //Up
-            param_b(msg, 2)  //Down
-        );
-    case 'f':  //Set up pull up/downs
-        return pck_gpio_pin_func
-        (
-            param_i(msg, 0), //Pin
-            param_c(msg, 1)  //Func g=gpio, p=pwm
-        );
+    case 'o': return pck_gpio_out(msg, n0, n1); 
+    case 'i': return pck_gpio_in(msg, n0, n1);
+    case 'p': return pck_gpio_pull(msg, n0, n1);
+    case 'f': return pck_gpio_pin_func(msg, n0, n1);
     default:
-        errorf("Unknown GPIO command \"%c\"", msg->name[1]);
-        return -1;
+        errorf("Unknown GPIO command \"%c\"", n1);
+        msg_t result = INIT_RMSG(n0, n1, 0);
+        SET_MSG_SUCCESS(&result, false);
+        return result;
     }
 }
 
 
-static inline int run_cmd(const msg_t* msg)
+static inline msg_t run_cmd(const msg_t* msg)
 {
-    switch (msg->name[0])
+    const char n0 = msg->name[0];
+    const char n1 = msg->name[1];
+    switch (n0)
     {
-    case 'G': return run_gpio_cmd(msg);   
-    case 'P': return run_pwm_cmd(msg);
-    case 'U': return run_util_cmd(msg);
+    case 'G': return run_gpio_cmd(msg, n0, n1);   
+    case 'P': return run_pwm_cmd(msg, n0, n1);
+    case 'U': return run_util_cmd(msg, n0, n1);
     default:
-        errorf("Unknown command \"%c\"", msg->name[0]);
-        return -1;
+        errorf("Unknown command \"%c\"", n0);
+        msg_t result = INIT_RMSG(n0, n1, 0);
+        SET_MSG_SUCCESS(&result, false);
+        return result;
     }
 }
 
@@ -215,11 +112,8 @@ int main() {
             continue;
         }
 
-        if(run_cmd(&msg))
-        {
-            errorf("Failed executing command %i", i);
-            continue;
-        }
+        msg = run_cmd(&msg);
+        send_msg(&msg);    
     }
     return 0;
 }

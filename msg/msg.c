@@ -354,6 +354,43 @@ int send_msg(const msg_t* const msg)
     return result;
 }
 
+int is_msg_success(const msg_t* const msg, const char n0, const char n1, const int pcount)
+{
+    if(msg->name[0] != n0)
+    {
+        msgs.errorf("Wrong message name0 type. Expected '%c' but got '%c'!\n", n0, msg->name[0]);
+        return -1;        
+    }
+
+    if(msg->name[0] != n0)
+    {
+        msgs.errorf("Wrong message name1 type. Expected '%c' but got '%c'!\n", n1, msg->name[1]);
+        return -1;        
+    }
+
+    if(msg->pcount < 1)
+    {
+        msgs.errorf("Not enough parameters to check for success!\n");
+        return -1;
+    }
+
+    if(msg->pcount - 1 != pcount)
+    {
+        msgs.errorf("Unexpected number of parameters returned. Expected %i but got %i!\n", pcount, (int)msg->pcount - 1);
+        return -1;
+    }
+
+    const int s = msg->pcount - 1;
+    if(msg->params[s].type != 'b')
+    {
+        msgs.errorf("Success feild must be a boolean!\n");
+        return -1;
+    }
+
+    return msg->params[s].b;
+
+}
+
 
 void msg_free(msg_t* msg)
 {

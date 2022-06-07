@@ -47,7 +47,8 @@ void pck_init_host_msgs()
     {
         .getchar = serial_getchar,
         .sendf = sendf,
-        .errorf = errorf
+        .errorf = errorf,
+        .debugf = debugf,
     };
 
     init_msgs(&msg_funcs);
@@ -55,7 +56,7 @@ void pck_init_host_msgs()
 
 
 //Work through list of responses until we find a non error response, or nothing
-int get_response(msg_t* msg)
+int pck_get_response(msg_t* msg)
 {
     while (serial_peek())
     {
@@ -104,3 +105,29 @@ int pck_get_errors()
 }
 
 
+int pck_success(const char n0, const char n1, const int pcount)
+{
+    while(1)
+    {
+        msg_t msg = {0};
+        if (get_msg(&msg))
+        {
+            fprintf(stderr, "Could not get message response from device\n");
+            return -1;
+        }
+
+        const char msg_n0 = msg.name[0];
+        switch (msg_n0)
+        {
+        case 'E':
+            fprintf(stderr, "Device error: %s\n", param_s(&msg, 0));
+            continue;
+        case 'D':
+            fprintf(stderr, "Device debug: %s\n", param_s(&msg, 0));
+            continue;
+        }
+
+       return is_msg_success(&msg, n0, n1, pcount);
+    }
+
+}

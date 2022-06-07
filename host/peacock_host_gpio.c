@@ -2,7 +2,7 @@
 #include "peacock_host_msg.h"
 #include "peacock_host_pins.h"
 #include "peacock_host_err.h"
-
+#include "peacock_host_msg.h"
 
 
 //Set output on GPIO pin
@@ -20,19 +20,15 @@ int pck_gpio_out(const int pin, const int val)
         return -1;
     }
 
-    const msg_t msg =
-    {
-        .name =  {'G', 'o'},
-        .pcount = 2,
-        .params =
-        {
-            INT(pin),
-            INT(val),
-        }
-    };
+    const char n0 = 'G'; //GPIO group
+    const char n1 = 'o'; //Output function
 
-    send_msg(&msg);
-    return 0;
+    msg_t msg = INIT_MSG(n0, n1, 2);
+    SET_MSG_PARAM_I(&msg, 0, pin);
+    SET_MSG_PARAM_I(&msg, 1, val);
+    send_msg(&msg);    
+
+    return pck_success(n0, n1, 0);
 }
 
 
@@ -45,50 +41,35 @@ int pck_gpio_in(const int pin)
         return -1;
     }
 
-    msg_t msg =
-    {
-        .name = {'G', 'i'},
-        .pcount = 2,
-        .params =
-        {
-            INT(pin),
-        }
-    };
+    const char n0 = 'G'; //GPIO group
+    const char n1 = 'i'; //input function
 
-    send_msg(&msg);
+    msg_t msg = INIT_MSG(n0, n1, 2);
+    SET_MSG_PARAM_I(&msg, 0, pin);
+    send_msg(&msg);    
 
-    const int max_attempts = 100;
-    for (int i = 0; get_response(&msg); i++)
+    if(pck_get_response(&msg))
     {
-        if (i > max_attempts)
-        {
-            errorf("Made %i attempts to get response but found none\n", max_attempts);
-            return -1;
-        }
+        errorf("Could not get message GPIO input response\n");
     }
 
-    if (msg.name[0] != 'G' && msg.name[1] != 'i')
+    int success = is_msg_success(&msg, n0, n1, 2);
+    if(success < 1)
     {
-        errorf("Unexpected reply message type. Expected 'Gi' but got '%c%c'\n", msg.name[0], msg.name[1]);
+        errorf("GPIO Input command failed!\n");
+        return -1;
+    }    
+
+    const int msg_pin = param_i(&msg, 0);
+    const bool msg_val = param_b(&msg, 1);
+
+    if(msg_pin != pin)
+    {
+        errorf("Got the wrong pin back. Expected %i, but got %i\n", pin, msg_pin);
         return -1;
     }
 
-    if (msg.pcount != 2)
-    {
-        errorf("Unexpected parameter count. Expected 2 but got %i\n", msg.pcount);
-        return -1;
-    }
-
-    const int rx_pin = param_i(&msg, 0);
-    const int rx_val = param_b(&msg, 1);
-
-    if (rx_pin != pin)
-    {
-        errorf("Wrong pin numer! Expected %i but got %i\n", pin, rx_pin);
-        return -1;
-    }
-
-    return rx_val;
+    return msg_val;
 }
 
 //Set the pull ups/downs on the give pin
@@ -100,20 +81,16 @@ int pck_gpio_pull(int pin, bool up, bool dwn)
         return -1;
     }
 
-    const msg_t msg =
-    {
-        .name = {'G', 'p'},
-        .pcount = 3,
-        .params =
-        {
-            INT(pin),
-            BOOL(up),
-            BOOL(dwn),
-        }
-    };
+    const char n0 = 'G'; //GPIO group
+    const char n1 = 'p'; //Pull up/down function
 
-    send_msg(&msg);
-    return 0;
+    msg_t msg = INIT_MSG(n0, n1, 3);
+    SET_MSG_PARAM_I(&msg, 0, pin);
+    SET_MSG_PARAM_B(&msg, 1, up);
+    SET_MSG_PARAM_B(&msg, 2, dwn);
+    send_msg(&msg);    
+
+    return pck_success(n0, n1, 0);
 }
 
 
@@ -132,17 +109,13 @@ int pck_gpio_pin_func(const int pin, const char func)
         return -1;
     }
 
-    const msg_t msg =
-    {
-        .name = {'G', 'f'},
-        .pcount = 2,
-        .params =
-        {
-            INT(pin),
-            CHAR(func),
-        }
-    };
+    const char n0 = 'G'; //GPIO group
+    const char n1 = 'f'; //Function mode
 
-    send_msg(&msg);
-    return 0;
+    msg_t msg = INIT_MSG(n0, n1, 2);
+    SET_MSG_PARAM_I(&msg, 0, pin);
+    SET_MSG_PARAM_C(&msg, 1, func);
+    send_msg(&msg);    
+
+    return pck_success(n0, n1, 0);
 }

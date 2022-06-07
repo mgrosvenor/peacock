@@ -1,19 +1,12 @@
 #ifndef PEACOCK_DEV_PWM
 #define PEACOCK_DEV_PWM
 
-#include <stdbool.h>
+#include "../msg/msg.h"
 
-int pck_pwm_slice_channel_num(const int pin, int* slice_num, int* channel_num);
-int pck_pwm_config(const int slice_num, const char mode, const int div_int, const int div_frc, const int wrap, bool phase_correct);
-int pck_pwm_level(const int pin, const int level);
-int pck_pwm_enable(const int slice, bool enabled);
-
-typedef struct 
-{
-    int now_ts;
-    int count;
-} pwm_count_t;
-int pck_pwm_get_counter(const int slice, pwm_count_t* count );
-
+msg_t pck_pwm_slice_channel_num(const msg_t* const msg, const char n0, const char n1);
+msg_t pck_pwm_config(const msg_t* const msg, const char n0, const char n1);
+msg_t pck_pwm_level(const msg_t* const msg, const char n0, const char n1);
+msg_t pck_pwm_enable(const msg_t* const msg, const char n0, const char n1);
+msg_t pck_pwm_get_counter(const msg_t* const msg, const char n0, const char n1);
 
 #endif // PEACOCK_DEV_PWM

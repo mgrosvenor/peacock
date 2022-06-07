@@ -17,6 +17,7 @@ pico_sdk_init()
 
 add_executable(peacock_dev
         peacock_dev_msg.c
+        peacock_dev_err.c
         peacock_dev_pins.c
         peacock_dev_gpio.c
         peacock_dev_pwm.c
