@@ -6,7 +6,7 @@
 #include <math.h>
 
 
-#include <peacock_host.h>
+#include <peacock/peacock.h>
 
 static volatile bool stop = false;
 

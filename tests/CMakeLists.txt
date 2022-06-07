@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.13)
+cmake_minimum_required(VERSION 3.23)
 project(peacock_test)
 set(CMAKE_C_STANDARD 11)
 
@@ -8,15 +8,22 @@ set(CMAKE_FLAGS_RELEASE "-O3 -g")
 
 include_directories(
     ./
-    ../host/include
+    ../
 )
 
-link_directories(
-    ${peacock_BINARY_DIR}/host/src
-)
+if (NOT TARGET peacock)
+    add_subdirectory(
+        ${PROJECT_SOURCE_DIR}/../peacock/ ${PROJECT_BINARY_DIR}/peacock
+    )
+    link_directories(
+        ${PROJECT_BINARY_DIR}/peacock
+    )
+
+endif() 
+
 
 link_libraries(
-    libpeacock_host
+    peacock
 )
 
 # add the executable

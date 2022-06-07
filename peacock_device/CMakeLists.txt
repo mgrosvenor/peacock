@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.13)
+cmake_minimum_required(VERSION 3.23)
 set(CMAKE_C_STANDARD 11)
 
 # initialize pico-sdk from GIT
@@ -25,7 +25,7 @@ add_executable(peacock_dev
         peacock_dev_err.c
         peacock_dev_pins.c
         peacock_dev_gpio.c
-        peacock_dev_pwm.c        
+        peacock_dev_pwm.c  
         peacock_dev.c       
 )
 
@@ -33,13 +33,18 @@ target_compile_definitions(peacock_dev PUBLIC
         PICO_STDIO_USB_CONNECT_WAIT_TIMEOUT_MS=-1
         PICO_STDIO_DEFAULT_CRLF=0
 )
-add_subdirectory(
-        ${PROJECT_SOURCE_DIR}/../common/peacock_msg ${PROJECT_BINARY_DIR}/peacock_msg
-)
 
-link_directories(
-        ${PROJECT_BINARY_DIR}/peacock_msg
-)
+if (NOT TARGET peacock_msg)
+        add_subdirectory(
+                ${PROJECT_SOURCE_DIR}/../common/peacock_msg ${PROJECT_BINARY_DIR}/peacock_msg
+        )
+
+        link_directories(
+                ${PROJECT_BINARY_DIR}/peacock_msg
+        )
+endif() 
+
+
 
 target_link_libraries(peacock_dev 
         pico_stdlib 
@@ -59,3 +64,5 @@ pico_enable_stdio_uart(peacock_dev 0)
 
 # create map/bin/hex/uf2 file etc.
 pico_add_extra_outputs(peacock_dev)
+
+install(TARGETS peacock_dev DESTINATION ${CMAKE_BINARY_DIR})
