@@ -104,7 +104,6 @@ int main(int argc, char** argv)
         flash(100*1000);
     }
     
-    
     pck_close();
     printf("Host is exiting\n");
     return 0;
