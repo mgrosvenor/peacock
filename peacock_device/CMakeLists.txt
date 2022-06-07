@@ -1,5 +1,13 @@
 cmake_minimum_required(VERSION 3.23)
+set(CMAKE_C_COMPILER arm-none-eabi-gcc)
+set(CMAKE_CPP_COMPILER arm-none-eabi-g++)
+
 set(CMAKE_C_STANDARD 11)
+set(CMAKE_CXX_STANDARD 17)
+
+set(CMAKE_C_FLAGS "-march=armv6-m -Wall -Werror -Wextra")
+set(CMAKE_C_FLAGS_DEBUG "-g")
+set(CMAKE_FLAGS_RELEASE "-O3 -g")
 
 # initialize pico-sdk from GIT
 # (note this can come from environment, CMake cache etc)
@@ -44,8 +52,6 @@ if (NOT TARGET peacock_msg)
         )
 endif() 
 
-
-
 target_link_libraries(peacock_dev 
         pico_stdlib 
         hardware_pwm 
@@ -54,9 +60,7 @@ target_link_libraries(peacock_dev
         peacock_msg
 )
 
-set(CMAKE_C_FLAGS "-march=armv6-m -Wall -Werror -Wextra")
-set(CMAKE_C_FLAGS_DEBUG "-g")
-set(CMAKE_FLAGS_RELEASE "-O3 -g")
+
 
 # enable usb output, disable uart output
 pico_enable_stdio_usb(peacock_dev 1)
