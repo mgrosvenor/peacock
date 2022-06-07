@@ -1,5 +1,5 @@
-#include "peacock_host_pins.h"
-#include "peacock_host_err.h"
+#include <libpeacock/peacock_pins.h>
+#include <libpeacock/peacock_err.h>
 
 int pin_valid(int pin)
 {

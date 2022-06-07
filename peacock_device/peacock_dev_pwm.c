@@ -1,11 +1,13 @@
 #include <stdint.h>
 #include <stdbool.h>
-#include "hardware/pwm.h"
-#include "hardware/timer.h"
 
-#include "peacock_dev_pwm.h"
-#include "peacock_dev_pins.h"
-#include "peacock_dev_msg.h"
+#include <hardware/pwm.h>
+#include <hardware/timer.h>
+
+#include <peacock_dev_pwm.h>
+#include <peacock_dev_pins.h>
+#include <peacock_dev_msg.h>
+#include <peacock_dev_err.h>
 
 #define PWM_SLICE_COUNT 8
 typedef struct
@@ -219,13 +221,13 @@ msg_t pck_pwm_get_counter(const msg_t* const msg, const char n0, const char n1)
 
     const uint64_t start = time_us_64();
     const int count = pwm_get_counter(slice_num);
-    const uint64_t stop  = time_us_64();
+    //const uint64_t stop  = time_us_64();
     
     //Assume that the pwm_counter is fetched in the middle of the two timestamps 
-    const uint64_t now_ts = (start + stop) / 2;
+    const uint64_t now_ts = start; //(start + stop) / 2;
 
-    const int now_ts_lo = (uint32_t)(now_ts & 0x00000000FFFFFFFF);
-    const int now_ts_hi = (uint32_t)( (now_ts & 0xFFFFFFFF00000000) >> 32);
+    const int now_ts_lo = (uint32_t)( now_ts & 0x00000000FFFFFFFFULL       );
+    const int now_ts_hi = (uint32_t)((now_ts & 0xFFFFFFFF00000000ULL) >> 32);    
     
     SET_MSG_PARAM_I(&result, 0, slice_num);
     SET_MSG_PARAM_I(&result, 1, count);

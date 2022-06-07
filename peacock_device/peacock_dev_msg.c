@@ -2,10 +2,10 @@
 #include <stdarg.h>
 #include <stdint.h>
 #include <stdlib.h>
-#include "../msg/msg.h"
 
-#include "peacock_dev_msg.h"
-#include "peacock_dev_err.h"
+#include <peacock_msg/peacock_msg.h>
+#include <peacock_dev_msg.h>
+#include <peacock_dev_err.h>
 
 __attribute__((format(printf, 1, 2)))
 static int sendf(const char* fmt, ...)

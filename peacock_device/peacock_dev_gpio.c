@@ -1,7 +1,7 @@
-#include "hardware/gpio.h"
+#include <hardware/gpio.h>
 
-#include "peacock_dev_gpio.h" 
-#include "peacock_dev_msg.h"
+#include <peacock_dev_gpio.h>
+#include <peacock_dev_msg.h>
 
 
 static inline void _gpio_init(const int pin, pin_state_t* pin_state)

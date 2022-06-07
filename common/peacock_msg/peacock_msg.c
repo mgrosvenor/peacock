@@ -5,8 +5,7 @@
 #include <stdio.h>
 #include <stdarg.h>
 
-#include "msg.h"
-
+#include "peacock_msg.h"
 
 static msg_funcs_t msgs = { 0 };
 void init_msgs(const msg_funcs_t* msg_funcs)
@@ -346,6 +345,9 @@ int send_msg(const msg_t* const msg)
         default:
             //Can't send an error here because we'll get into a broken state. So just put in a dummy.
             result += msgs.sendf(":x%04x", (int)msg->params[i].i);
+            
+            //Can't put this error message out on the device because it will mess with inflight message
+            if(!msgs.isdev) msgs.errorf("Unexpected type '%c' for parameter %i. Sending 'x' instead.", msg->params[i].type, i);
             break;            
         }        
     }

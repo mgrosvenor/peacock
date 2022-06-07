@@ -1,9 +1,3 @@
-/**
- * Copyright (c) 2020 Raspberry Pi (Trading) Ltd.
- *
- * SPDX-License-Identifier: BSD-3-Clause
- */
-
 #include <stdio.h>
 #include <stdarg.h>
 #include <ctype.h>
@@ -11,18 +5,17 @@
 
 #define PICO_STDIO_USB_CONNECT_WAIT_TIMEOUT_MS -1
 #define PICO_STDIO_DEFAULT_CRLF 0
-#include "pico/stdio/driver.h"
-#include "pico/stdio_usb.h"
-#include "pico/stdlib.h"
-#include "tusb.h"
-#include "hardware/pwm.h"
+#include <pico/stdio/driver.h>
+#include <pico/stdio_usb.h>
+#include <pico/stdlib.h>
+#include <tusb.h>
+#include <hardware/pwm.h>
 
-#include "../msg/msg.h"
-#include "peacock_dev_msg.h"
-#include "peacock_dev_pins.h"
-#include "peacock_dev_gpio.h"
-#include "peacock_dev_pwm.h"
-
+#include <peacock_msg/peacock_msg.h>
+#include <peacock_dev_msg.h>
+#include <peacock_dev_pins.h>
+#include <peacock_dev_gpio.h>
+#include <peacock_dev_pwm.h>
 
 static inline msg_t run_util_cmd(const msg_t* const msg, const char n0, const char n1)
 {
@@ -108,7 +101,7 @@ int main() {
         msg_t msg = {0};
         if(get_msg(&msg))
         {
-            errorf("Failed to get command %i", i);
+            errorf("Failed to run command num %i", i);
             continue;
         }
 

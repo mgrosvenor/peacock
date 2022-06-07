@@ -1,8 +1,8 @@
-#include "peacock_dev_pins.h"
-#include "peacock_dev_msg.h"
-
-#include <hardware/gpio.h>
 #include <stdlib.h>
+
+#include <peacock_dev_pins.h>
+#include <peacock_dev_msg.h>
+
 
 pin_state_t pins[PIN_COUNT] = {0};
 

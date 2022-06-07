@@ -1,0 +1,5 @@
+project(peacock LANGUAGES C)
+add_subdirectory(msg)
+add_subdirectory(device)
+add_subdirectory(host)
+add_subdirectory(demo)

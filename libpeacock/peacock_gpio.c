@@ -1,8 +1,8 @@
-#include "peacock_host_gpio.h"
-#include "peacock_host_msg.h"
-#include "peacock_host_pins.h"
-#include "peacock_host_err.h"
-#include "peacock_host_msg.h"
+#include <libpeacock/peacock_gpio.h>
+#include <libpeacock/peacock_msg.h>
+#include <libpeacock/peacock_pins.h>
+#include <libpeacock/peacock_err.h>
+#include <libpeacock/peacock_msg.h>
 
 
 //Set output on GPIO pin
@@ -48,7 +48,7 @@ int pck_gpio_in(const int pin)
     SET_MSG_PARAM_I(&msg, 0, pin);
     send_msg(&msg);    
 
-    if(pck_get_response(&msg))
+    if(pck_next_msg(&msg))
     {
         errorf("Could not get message GPIO input response\n");
     }

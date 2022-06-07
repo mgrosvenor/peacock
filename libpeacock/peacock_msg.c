@@ -2,10 +2,10 @@
 #include <stdint.h>
 #include <stdio.h>
 
-#include "serial.h"
+#include <common/peacock_msg/peacock_msg.h>
 
-#include "../msg/msg.h"
-#include "peacock_host_err.h"
+#include <libpeacock/peacock_serial.h>
+#include <libpeacock/peacock_err.h>
 
 //static int nl = true;
 
@@ -14,7 +14,7 @@ int sendf(const char* fmt, ...)
 {
     va_list args;
     va_start(args, fmt);
-    const int result = serial_vsend_str(fmt, args);
+    const int result = pck_serial_vsendf(fmt, args);
     va_end(args);
 
     // va_start(args, fmt);
@@ -45,7 +45,7 @@ void pck_init_host_msgs()
 {
     msg_funcs_t msg_funcs =
     {
-        .getchar = serial_getchar,
+        .getchar = pck_serial_getchar,
         .sendf = sendf,
         .errorf = errorf,
         .debugf = debugf,
@@ -55,10 +55,11 @@ void pck_init_host_msgs()
 }
 
 
+
 //Work through list of responses until we find a non error response, or nothing
-int pck_get_response(msg_t* msg)
+int pck_next_msg(msg_t* msg)
 {
-    while (serial_peek())
+    while (1)
     {
         if (get_msg(msg))
         {
@@ -71,37 +72,16 @@ int pck_get_response(msg_t* msg)
         case 'E':
             fprintf(stderr, "Device error: %s\n", param_s(msg, 0));
             continue;
-        default:
-            return 0 ;
-        }
-    }
-
-    return 1;
-}
-
-//Work through list of responses until we find a non error response, or nothing
-int pck_get_errors()
-{
-    msg_t msg = {0};
-    while (serial_peek())
-    {
-        if (get_msg(&msg))
-        {
-            fprintf(stderr, "Could not get message response\n");
-            return -1;
-        }
-
-        switch (msg.name[0])
-        {
-        case 'E':
-            fprintf(stderr, "Device error: %s\n", param_s(&msg, 0));
+        case 'D':
+            fprintf(stderr, "Device debug: %s\n", param_s(msg, 0));
             continue;
         default:
             return 0;
         }
     }
 
-    return 1;
+    //Unreachable
+    return -1;
 }
 
 
@@ -129,5 +109,4 @@ int pck_success(const char n0, const char n1, const int pcount)
 
        return is_msg_success(&msg, n0, n1, pcount);
     }
-
 }

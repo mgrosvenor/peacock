@@ -1,8 +1,10 @@
-#include "peacock_host_err.h"
+
 
 #include <stdio.h>
 #include <stdint.h>
 #include <stdbool.h>
+
+#include <libpeacock/peacock_err.h>
 
 static inline void _errorf(bool debug, const char* fmt, va_list args)
 {

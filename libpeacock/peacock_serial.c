@@ -8,7 +8,7 @@
 
 static int serial_fd = -1; 
 
-int open_serial_port(const char* device)
+int pck_serial_open(const char* device)
 {
     int fd = open(device, O_RDWR | O_NOCTTY | O_NONBLOCK);
     if (fd == -1)
@@ -95,7 +95,7 @@ int open_serial_port(const char* device)
 
 
 //Poll waiting for more
-static inline int wait_response(char* response_buff, int len)
+static inline int _wait_response(char* response_buff, int len)
 {
     if(serial_fd < 0)
     {
@@ -117,7 +117,7 @@ static char* response = response_buf;
 static int response_rem = 0;
 
 //Are there more bytes to consume, return +ve if yes, 0 if no
-int serial_peek()
+int pck_serial_peek()
 {
     if (serial_fd < 0)
     {
@@ -143,11 +143,11 @@ int serial_peek()
 
 
 //Buffered getchar from the serial port
-int serial_getchar()
+int pck_serial_getchar()
 {
     if (response_rem <= 0)
     {
-        response_rem = wait_response(response_buf, RESP_MAX);
+        response_rem = _wait_response(response_buf, RESP_MAX);
         response = response_buf;
         // fprintf(stderr,"Host debug. Received: %.*s", response_rem, response_buf);
         // fflush(stderr);
@@ -159,14 +159,14 @@ int serial_getchar()
     return result;
 }
 
-int serial_vsend_str(const char* fmt, va_list args)
+int pck_serial_vsendf(const char* fmt, va_list args)
 {
     int ret = vdprintf(serial_fd, fmt, args);
     //fsync(serial_fd);
     return ret;
 }
 
-void serial_close()
+void pck_serial_close()
 {
     close(serial_fd);
 }

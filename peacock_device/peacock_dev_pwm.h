@@ -1,7 +1,7 @@
 #ifndef PEACOCK_DEV_PWM
 #define PEACOCK_DEV_PWM
 
-#include "../msg/msg.h"
+#include <peacock_msg/peacock_msg.h>
 
 msg_t pck_pwm_slice_channel_num(const msg_t* const msg, const char n0, const char n1);
 msg_t pck_pwm_config(const msg_t* const msg, const char n0, const char n1);

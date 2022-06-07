@@ -1,7 +1,7 @@
-#include "peacock_host_pwm.h"
-#include "peacock_host_err.h"
-#include "peacock_host_msg.h"
-#include "peacock_host_pins.h"
+#include <libpeacock/peacock_pwm.h>
+#include <libpeacock/peacock_err.h>
+#include <libpeacock/peacock_msg.h>
+#include <libpeacock/peacock_pins.h>
 
 #define PWM_SLICE_COUNT 8
 
@@ -25,7 +25,7 @@ int pck_pwm_slice_channel_num(const int pin, int* slice_num, int* channel_num)
     SET_MSG_PARAM_I(&msg, 0, pin);
     send_msg(&msg);    
 
-    if(pck_get_response(&msg))
+    if(pck_next_msg(&msg))
     {
         errorf("Could not get message PWM slice/channel response\n");
     }
@@ -160,11 +160,11 @@ int pck_pwm_get_counter(const int slice, pwm_count_t* count)
     const char n0 = 'P'; //PWM group
     const char n1 = 'C'; //get counter function
 
-    msg_t msg = INIT_MSG(n0, n1, 2);
+    msg_t msg = INIT_MSG(n0, n1, 1);
     SET_MSG_PARAM_I(&msg, 0, slice);
     send_msg(&msg);
     
-    if(pck_get_response(&msg))
+    if(pck_next_msg(&msg))
     {
         errorf("Could not get message PWM counter fetch response\n");
     }

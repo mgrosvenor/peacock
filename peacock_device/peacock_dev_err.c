@@ -1,9 +1,9 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include "../msg/msg.h"
 
-#include "peacock_dev_err.h"
+#include <peacock_msg/peacock_msg.h>
+#include <peacock_dev_err.h>
 
 
 static inline void _errorf(bool debug, const char* fmt, va_list args)

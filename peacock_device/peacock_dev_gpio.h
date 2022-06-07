@@ -1,8 +1,8 @@
 #ifndef PEACOCK_DEV_GPIO
 #define PEACOCK_DEV_GPIO
 
-#include "peacock_dev_pins.h"
-#include "../msg/msg.h"
+#include <peacock_dev_pins.h>
+#include <peacock_msg/peacock_msg.h>
 
 void pck_gpio_init_all();
 void pck_gpio_pull_disable_all();
