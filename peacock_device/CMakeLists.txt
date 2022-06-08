@@ -60,8 +60,6 @@ target_link_libraries(peacock_dev
         peacock_msg
 )
 
-
-
 # enable usb output, disable uart output
 pico_enable_stdio_usb(peacock_dev 1)
 pico_enable_stdio_uart(peacock_dev 0)
@@ -69,4 +67,4 @@ pico_enable_stdio_uart(peacock_dev 0)
 # create map/bin/hex/uf2 file etc.
 pico_add_extra_outputs(peacock_dev)
 
-install(TARGETS peacock_dev DESTINATION ${CMAKE_BINARY_DIR})
+#install(TARGETS peacock_dev DESTINATION ${CMAKE_BINARY_DIR})

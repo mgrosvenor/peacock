@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.23)
+cmake_minimum_required(VERSION 3.11)
 project(peacock)
 set(CMAKE_C_STANDARD 11)
 
@@ -39,4 +39,3 @@ add_library(peacock
 target_link_libraries(peacock
     peacock_msg
 )
-
