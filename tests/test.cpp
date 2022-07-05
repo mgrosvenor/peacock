@@ -4,8 +4,18 @@
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
+#include <iostream>
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 #include <peacock/peacock.h>
+
+#ifdef __cplusplus
+    }
+#endif
+
 
 static volatile bool stop = false;
 
