@@ -1,5 +1,5 @@
-#ifndef PEACOCK_MSG
-#define PEACOCK_MSG
+#ifndef COMMON_PEACOCK_MSG
+#define COMMON_PEACOCK_MSG
 
 #include <stdint.h>
 #include <stdbool.h>
@@ -114,4 +114,4 @@ int is_msg_success(const msg_t* const msg, const char n0, const char n1, const i
 #define SET_MSG_PARAM_S(msg, P, V) _SET_MSG_PARAM(msg, P, 's', s, V)
 
 
-#endif // PEACOCK_MSG
+#endif // COMMON_PEACOCK_MSG
