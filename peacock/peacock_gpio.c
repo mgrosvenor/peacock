@@ -44,7 +44,7 @@ int pck_gpio_in(const int pin)
     const char n0 = 'G'; //GPIO group
     const char n1 = 'i'; //input function
 
-    msg_t msg = INIT_MSG(n0, n1, 2);
+    msg_t msg = INIT_MSG(n0, n1, 1);
     SET_MSG_PARAM_I(&msg, 0, pin);
     send_msg(&msg);    
 
