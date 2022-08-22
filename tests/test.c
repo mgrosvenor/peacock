@@ -7,6 +7,15 @@
 
 #include <peacock/peacock.h>
 
+#define TRY(x)          \
+do{                     \
+    int err = x;        \
+    if(err < 0)         \
+    {                   \
+        return;         \
+    }                   \
+} while(0);             \
+
 static volatile bool stop = false;
 
 static void catch_signal(int signum)
@@ -17,15 +26,15 @@ static void catch_signal(int signum)
 
 static inline void flash(int sleepus)
 {
-    const int pin = 25;
-    pck_gpio_pin_func(pin, PCK_GPIO_FUNC_GPIO);
-    pck_gpio_pull(pin, false, false);
+    const int pin = 25;    
+    TRY(pck_gpio_pin_func(pin, PCK_GPIO_FUNC_GPIO));
+    TRY(pck_gpio_pull(pin, false, false));
     while(!stop)
     {
-        pck_gpio_out(pin, 0);
-        pck_util_sleep(sleepus);
-        pck_gpio_out(pin, 1);
-        pck_util_sleep(sleepus);
+        TRY(pck_gpio_out(pin, 0));
+        TRY(pck_util_sleep(sleepus));
+        TRY(pck_gpio_out(pin, 1));
+        TRY(pck_util_sleep(sleepus));
     }
 }
 
@@ -33,19 +42,19 @@ static inline void flash(int sleepus)
 void pulse()
 {
     const int pin = 25;
-    pck_gpio_pin_func(pin, PCK_GPIO_FUNC_PWM);
+    TRY(pck_gpio_pin_func(pin, PCK_GPIO_FUNC_PWM));
     
     int slice = -1;
     int channel = -1;
-    pck_pwm_slice_channel_num(pin, &slice, &channel);            
+    TRY(pck_pwm_slice_channel_num(pin, &slice, &channel));
 
-    pck_pwm_enable(slice, false);
+    TRY(pck_pwm_enable(slice, false));
     const int wrap = 5000;
-    pck_pwm_config(slice, PCK_PWM_MODE_FREE, 1, 0, wrap, false);
+    TRY(pck_pwm_config(slice, PCK_PWM_MODE_FREE, 1, 0, wrap, false));
 
     int level = 1;
-    pck_pwm_level(pin, level);
-    pck_pwm_enable(slice, true);
+    TRY(pck_pwm_level(pin, level));
+    TRY(pck_pwm_enable(slice, true));
 
     bool up = true;
     while(!stop)
@@ -74,8 +83,8 @@ void pulse()
                 level = 1;
             }
         }
-        pck_pwm_level(pin, level);
-        pck_util_sleep(50*1000);
+        TRY(pck_pwm_level(pin, level));
+        TRY(pck_util_sleep(50 * 1000));
     }
 }
 
@@ -92,7 +101,11 @@ int main(int argc, char** argv)
     const char* device = argv[1];
     const int mode = atoi(argv[2]);
 
-    pck_init(device);       
+    int err = pck_init(device);       
+    if(err)
+    {
+        return -1;
+    }
 
     if(mode == 0)
     {

@@ -5,7 +5,6 @@
 extern "C" {
 #endif
 
-
 #include <peacock/peacock_msg.h>
 #include <peacock/peacock_serial.h>
 #include <peacock/peacock_gpio.h>

@@ -8,7 +8,6 @@ int pck_util_sleep(int us)
 
     msg_t msg = INIT_MSG(n0, n1, 1);
     SET_MSG_PARAM_I(&msg, 0, us);
-    send_msg(&msg);    
+    return pck_do_msg_ts(&msg, n0, n1, 0);
 
-    return pck_success(n0, n1, 0);
 }

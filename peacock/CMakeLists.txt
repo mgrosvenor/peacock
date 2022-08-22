@@ -33,6 +33,7 @@ add_library(peacock
     peacock_pins.c
     peacock_util.c
     peacock_serial.c
+    peacock_lock.c
     peacock.c    
 )
 

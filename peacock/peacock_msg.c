@@ -6,6 +6,7 @@
 
 #include <peacock/peacock_serial.h>
 #include <peacock/peacock_err.h>
+#include <peacock/peacock_lock.h>
 
 //static int nl = true;
 
@@ -56,18 +57,19 @@ void pck_init_host_msgs()
 
 
 
-//Work through list of responses until we find a non error response, or nothing
-int pck_next_msg(msg_t* msg)
+static int _pck_success(msg_t* msg, const char n0, const char n1, const int pcount)
 {
-    while (1)
+    //Try for 1000 messages, or give up
+    for(int i = 0; i < 1000; i++)
     {
         if (get_msg(msg))
         {
-            fprintf(stderr, "Could not get message response\n");
+            fprintf(stderr, "Could not get message response from device\n");
             return -1;
         }
 
-        switch (msg->name[0])
+        const char msg_n0 = msg->name[0];
+        switch (msg_n0)
         {
         case 'E':
             fprintf(stderr, "Device error: %s\n", param_s(msg, 0));
@@ -75,38 +77,31 @@ int pck_next_msg(msg_t* msg)
         case 'D':
             fprintf(stderr, "Device debug: %s\n", param_s(msg, 0));
             continue;
-        default:
-            return 0;
         }
+
+       return is_msg_success(msg, n0, n1, pcount);
     }
 
-    //Unreachable
     return -1;
 }
 
-
-int pck_success(const char n0, const char n1, const int pcount)
+// This function combines the send message function with the success function
+// in a locked, threadsafe way. msg is both an input and an output parameter
+int pck_do_msg_ts(msg_t* const msg, const char n0, const char n1, const int pcount)
 {
-    while(1)
+    int err = pck_lock();
+    if(err < 0)
     {
-        msg_t msg = {0};
-        if (get_msg(&msg))
-        {
-            fprintf(stderr, "Could not get message response from device\n");
-            return -1;
-        }
-
-        const char msg_n0 = msg.name[0];
-        switch (msg_n0)
-        {
-        case 'E':
-            fprintf(stderr, "Device error: %s\n", param_s(&msg, 0));
-            continue;
-        case 'D':
-            fprintf(stderr, "Device debug: %s\n", param_s(&msg, 0));
-            continue;
-        }
-
-       return is_msg_success(&msg, n0, n1, pcount);
+        return -1;
     }
+    
+    send_msg(msg);
+    const int result = _pck_success(msg, n0, n1, pcount);
+    
+    err = pck_unlock();
+    if(err < 0 )
+    {
+        return -1;
+    }
+    return result;
 }

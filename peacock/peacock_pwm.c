@@ -23,19 +23,13 @@ int pck_pwm_slice_channel_num(const int pin, int* slice_num, int* channel_num)
 
     msg_t msg = INIT_MSG(n0, n1, 1);
     SET_MSG_PARAM_I(&msg, 0, pin);
-    send_msg(&msg);    
 
-    if(pck_next_msg(&msg))
+    const int res = pck_do_msg_ts(&msg, n0, n1, 3);
+    if (res < 0)
     {
         errorf("Could not get message PWM slice/channel response\n");
+        return -1; 
     }
-
-    int success = is_msg_success(&msg, n0, n1, 3);
-    if(success < 1)
-    {
-        errorf("PWM slice/channel fetch command failed!\n");
-        return -1;
-    }    
 
     const int msg_pin   = param_i(&msg, 0);
     const int msg_slice = param_i(&msg, 1);
@@ -99,9 +93,8 @@ int pck_pwm_config(const int slice_num, const char mode, const int div_int, cons
     SET_MSG_PARAM_I(&msg, 3, div_frc);
     SET_MSG_PARAM_I(&msg, 4, wrap);
     SET_MSG_PARAM_B(&msg, 5, phase_correct);
-    send_msg(&msg);
     
-    return pck_success(n0, n1, 0);
+    return pck_do_msg_ts(&msg, n0, n1, 0);    
 }
 
 
@@ -125,8 +118,8 @@ int pck_pwm_level(const int pin, const int level)
     msg_t msg = INIT_MSG(n0, n1, 2);
     SET_MSG_PARAM_I(&msg, 0, pin);
     SET_MSG_PARAM_I(&msg, 1, level);
-    send_msg(&msg);
-    return pck_success(n0, n1, 0);
+    return pck_do_msg_ts(&msg, n0, n1, 0);
+
 }
 
 
@@ -144,8 +137,7 @@ int pck_pwm_enable(const int slice, bool enabled)
     msg_t msg = INIT_MSG(n0, n1, 2);
     SET_MSG_PARAM_I(&msg, 0, slice);
     SET_MSG_PARAM_B(&msg, 1, enabled);
-    send_msg(&msg);
-    return pck_success(n0, n1, 0);
+    return pck_do_msg_ts(&msg, n0, n1, 0);
 }
 
 
@@ -162,20 +154,12 @@ int pck_pwm_get_counter(const int slice, pwm_count_t* count)
 
     msg_t msg = INIT_MSG(n0, n1, 1);
     SET_MSG_PARAM_I(&msg, 0, slice);
-    send_msg(&msg);
-    
-    if(pck_next_msg(&msg))
+    const int res = pck_do_msg_ts(&msg, n0, n1, 4);
+    if (res < 0)
     {
         errorf("Could not get message PWM counter fetch response\n");
     }
-
-    int success = is_msg_success(&msg, n0, n1, 4);
-    if(success < 1)
-    {
-        errorf("PWM counter fetch command failed!\n");
-        return -1;
-    }    
-
+    
     const int msg_slice  = param_i(&msg, 0);
     const int msg_count  = param_i(&msg, 1);
     const int msg_ts_lo  = param_i(&msg, 2);

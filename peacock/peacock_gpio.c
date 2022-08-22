@@ -2,7 +2,6 @@
 #include <peacock/peacock_msg.h>
 #include <peacock/peacock_pins.h>
 #include <peacock/peacock_err.h>
-#include <peacock/peacock_msg.h>
 
 
 //Set output on GPIO pin
@@ -26,9 +25,7 @@ int pck_gpio_out(const int pin, const int val)
     msg_t msg = INIT_MSG(n0, n1, 2);
     SET_MSG_PARAM_I(&msg, 0, pin);
     SET_MSG_PARAM_I(&msg, 1, val);
-    send_msg(&msg);    
-
-    return pck_success(n0, n1, 0);
+    return pck_do_msg_ts(&msg, n0, n1, 0);
 }
 
 
@@ -46,19 +43,13 @@ int pck_gpio_in(const int pin)
 
     msg_t msg = INIT_MSG(n0, n1, 1);
     SET_MSG_PARAM_I(&msg, 0, pin);
-    send_msg(&msg);    
-
-    if(pck_next_msg(&msg))
+    
+    const int res = pck_do_msg_ts(&msg,n0,n1,2);
+    if (res < 0)
     {
         errorf("Could not get message GPIO input response\n");
-    }
-
-    int success = is_msg_success(&msg, n0, n1, 2);
-    if(success < 1)
-    {
-        errorf("GPIO Input command failed!\n");
         return -1;
-    }    
+    }
 
     const int msg_pin = param_i(&msg, 0);
     const bool msg_val = param_b(&msg, 1);
@@ -88,9 +79,7 @@ int pck_gpio_pull(int pin, bool up, bool dwn)
     SET_MSG_PARAM_I(&msg, 0, pin);
     SET_MSG_PARAM_B(&msg, 1, up);
     SET_MSG_PARAM_B(&msg, 2, dwn);
-    send_msg(&msg);    
-
-    return pck_success(n0, n1, 0);
+    return pck_do_msg_ts(&msg, n0, n1, 0);
 }
 
 
@@ -115,7 +104,5 @@ int pck_gpio_pin_func(const int pin, const char func)
     msg_t msg = INIT_MSG(n0, n1, 2);
     SET_MSG_PARAM_I(&msg, 0, pin);
     SET_MSG_PARAM_C(&msg, 1, func);
-    send_msg(&msg);    
-
-    return pck_success(n0, n1, 0);
+    return pck_do_msg_ts(&msg, n0, n1, 0);
 }

@@ -4,9 +4,14 @@
 #include <stdint.h>
 #include <termios.h>
 #include <sys/ioctl.h>
+#include <sys/mman.h>
 #include <string.h>
+#include "peacock_serial.h"
 
-static int serial_fd = -1; 
+//This should be __thread local to be thread safe
+//but it's not shared across threads/processes, so not volatile
+static __thread int serial_fd = -1;
+
 
 int pck_serial_open(const char* device)
 {
@@ -97,7 +102,7 @@ int pck_serial_open(const char* device)
 //Poll waiting for more
 static inline int _wait_response(char* response_buff, int len)
 {
-    if(serial_fd < 0)
+    if (serial_fd < 0)
     {
         fprintf(stderr, "Serial port is not yet open\n");
     }
@@ -124,13 +129,13 @@ int pck_serial_peek()
         fprintf(stderr, "Serial port is not yet open\n");
     }
 
-    if(response_rem > 0)
+    if (response_rem > 0)
     {
         return response_rem;
     }
 
     int r = read(serial_fd, response_buf, RESP_MAX);
-    if(r <= 0)
+    if (r <= 0)
     {
         return 0;
     }
@@ -168,5 +173,5 @@ int pck_serial_vsendf(const char* fmt, va_list args)
 
 void pck_serial_close()
 {
-    close(serial_fd);
+    close(serial_fd);    
 }
