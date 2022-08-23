@@ -1,6 +1,7 @@
 #include "peacock_lock.h"
 
 #include <stdio.h>
+#include <stdint.h>
 #include <string.h>
 #include <errno.h>
 #include <time.h>

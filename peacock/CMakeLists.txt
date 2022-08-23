@@ -37,6 +37,14 @@ add_library(peacock
     peacock.c    
 )
 
-target_link_libraries(peacock
-    peacock_msg
-)
+if(UNIX AND NOT APPLE)
+    target_link_libraries(peacock 
+        peacock_msg
+        rt
+    )
+else()
+    target_link_libraries(peacock
+        peacock_msg
+    )
+endif()
+
