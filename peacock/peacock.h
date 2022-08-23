@@ -13,7 +13,7 @@ extern "C" {
 #include <peacock/peacock_pwm.h>
 #include <peacock/peacock_util.h>
 
-int pck_init(const char* dev);
+int pck_init(const char* dev, bool force);
 void pck_close();
 
 #ifdef __cplusplus

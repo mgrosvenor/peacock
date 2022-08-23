@@ -1,6 +1,7 @@
 #include <stdarg.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <signal.h>
 
 #include <common/peacock_msg/peacock_msg.h>
 
@@ -82,6 +83,7 @@ static int _pck_success(msg_t* msg, const char n0, const char n1, const int pcou
        return is_msg_success(msg, n0, n1, pcount);
     }
 
+    fprintf(stderr, "Tried 1000x to get a good message, but failed!\n");
     return -1;
 }
 
@@ -89,19 +91,28 @@ static int _pck_success(msg_t* msg, const char n0, const char n1, const int pcou
 // in a locked, threadsafe way. msg is both an input and an output parameter
 int pck_do_msg_ts(msg_t* const msg, const char n0, const char n1, const int pcount)
 {
-    int err = pck_lock();
-    if(err < 0)
+    //Block all signals while in the critical section
+    //This ensures that we always make a call to pck_unlock()
+    sigset_t mask;
+    sigfillset(&mask);
+    sigprocmask(SIG_SETMASK, &mask, NULL);
+
+    int result = 0; 
+    result = pck_lock();
+    if(result)
     {
-        return -1;
+        goto done;
     }
-    
+
     send_msg(msg);
-    const int result = _pck_success(msg, n0, n1, pcount);
-    
-    err = pck_unlock();
-    if(err < 0 )
-    {
-        return -1;
-    }
+
+    result = _pck_success(msg, n0, n1, pcount);
+
+    pck_unlock();
+
+done:
+    //Re-enable all signals now out of the critical section
+    sigemptyset(&mask);
+    sigprocmask(SIG_SETMASK, &mask, NULL);
     return result;
 }

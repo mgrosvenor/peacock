@@ -7,7 +7,7 @@
 #include <stdbool.h>
 #include <sys/types.h>
 #include <sys/stat.h>
-#include <pthread/pthread.h>
+#include <pthread.h>
 #include <fcntl.h>
 #include <sys/mman.h>
 #include <unistd.h>
@@ -32,15 +32,9 @@ typedef struct
 } shm_state_t;
 
 static long long shm_mem_size = -1;
-
-//These should be __thread local to be thread safe
-//and volatile to be shared across threads/processes
-__thread shm_state_t* shm_state = NULL;
-static __thread volatile void* shm_map = NULL;
-
-//This should be __thread local to be thread safe
-//but it's not shared across threads/processes, so not volatile
-static __thread int shm_fd = -1;
+static shm_state_t* shm_state = NULL;
+static volatile void* shm_map = NULL;
+static int shm_fd = -1;
 
 //Open, truncate and mmap a shared memory region
 //Optionally do so in either exclusive or non-exclusive mode
@@ -96,7 +90,12 @@ static int _pck_lock_open_map(bool exclusive)
         }
     }
 
+#if __APPLE__
     shm_map = mmap(NULL, shm_mem_size, PROT_WRITE | PROT_READ, MAP_SHARED | MAP_HASSEMAPHORE, shm_fd, 0);
+#else
+    shm_map = mmap(NULL, shm_mem_size, PROT_WRITE | PROT_READ, MAP_SHARED, shm_fd, 0);
+#endif
+
     if (shm_map == MAP_FAILED)
     {
         fprintf(stderr, "Could not map shared memory region '%s'. Error: %s\n", SHM_PATH, strerror(errno));
@@ -171,8 +170,10 @@ static int _pck_lock_shm_init_wait()
 }
 
 
-//Initialize a shared memory segment for shared state
-static int _pck_lock_open_shm()
+// Initialize a shared memory segment for shared state
+// Force init is used to recover from situations where the shared region
+// still exists, but is in a bad state (e.g. lock is held)
+static int _pck_lock_open_shm(bool force)
 {
     //Did someone come here before us...
     if (shm_state != NULL)
@@ -207,7 +208,19 @@ static int _pck_lock_open_shm()
             return -1;
         }
 
-        res = _pck_lock_shm_init_wait();
+        // The shm region exists, but we're going to force initialization
+        // Note: there's a race condition here if this is done with
+        // more than one process. Should be done with care, really only as
+        // a last resort!
+        if (force)
+        {
+            res = _pck_lock_shm_init();
+        }
+        else
+        {
+            res = _pck_lock_shm_init_wait();
+        }
+
         if (res < 0)
         {
             pck_lock_close();
@@ -219,15 +232,17 @@ static int _pck_lock_open_shm()
 }
 
 
-int pck_lock_init()
+// This function is *not* thread safe. It should be called by the 
+// main thread before other threads are started. All threads
+// can then share the internal state variables.
+int pck_lock_init(bool force)
 {
-    int res = _pck_lock_open_shm();
+    int res = _pck_lock_open_shm(force);
     if (res != 0)
     {
         fprintf(stderr, "Error opening shared memory region\n");
         return -1;
     }
-
     return 0;
 }
 
@@ -250,7 +265,7 @@ int pck_lock()
             fprintf(stderr, "Unexpected mutex error %i!\n", err);
             return -1;
         }
-        usleep(LOCK_RETRY_DELAY_US); //Just wait a little bit for our best chance at success
+        usleep(LOCK_RETRY_DELAY_US); //Slow down so this is not a spin lock!
     }
     fprintf(stderr, "Timed out waiting to acquire lock!\n");
     return -1; //Failed!         
@@ -264,11 +279,10 @@ int pck_unlock()
         int err = pthread_mutex_unlock((pthread_mutex_t*)&shm_state->mutex);
         if (err == 0)
         {
-            sched_yield();
-            usleep(100);            
+            sched_yield();//Help give others a chance!
             return 0;
         }        
-        usleep(LOCK_RETRY_DELAY_US); //Just wait a little bit for our best chance at success
+        usleep(LOCK_RETRY_DELAY_US); //Slow down so this is not a spin lock!
     }
     fprintf(stderr, "Timed out waiting to release lock!\n");
     return -1; //Failed!     
@@ -283,7 +297,12 @@ void pck_lock_close()
     }
     if (shm_fd)
     {
-        shm_unlink(SHM_PATH);
         close(shm_fd);
     }
+}
+
+//In case the shm memory region is really unrecoverable
+void pck_lock_shm_unlink()
+{
+    shm_unlink(SHM_PATH);
 }

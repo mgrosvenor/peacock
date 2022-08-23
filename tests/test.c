@@ -94,14 +94,20 @@ int main(int argc, char** argv)
     signal(SIGINT, catch_signal);
     if (argc < 3)
     {
-        fprintf(stderr, "usage: peacock_test DEV MODE\n");
+        fprintf(stderr, "usage: peacock_test DEV MODE [FORCE 0|1]\n");
         return -1;
     }
     printf("Host starting\n");
     const char* device = argv[1];
     const int mode = atoi(argv[2]);
 
-    int err = pck_init(device);       
+    bool force = false;
+    if (argc > 3)
+    {
+        force = atoi(argv[3]);
+    }
+
+    int err = pck_init(device, force);
     if(err)
     {
         return -1;

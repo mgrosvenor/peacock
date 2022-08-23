@@ -7,9 +7,9 @@
 #include <string.h>
 
 
-int pck_init(const char* dev)
+int pck_init(const char* dev, bool force)
 {
-    const int res = pck_lock_init();
+    const int res = pck_lock_init(force);
     if(res < 0)
     {
         return -1;
